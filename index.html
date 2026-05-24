@@ -222,40 +222,38 @@
   .act-btn:hover { background: var(--card); color: var(--text); }
   .act-btn.del:hover { background: var(--red-bg); color: var(--red); }
 
-  /* Note tooltip */
+  /* Note cell */
   .note-cell {
     position: relative;
-    cursor: default;
   }
   .note-cell .note-text {
-    display: block;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     color: var(--text2);
     font-size: 12px;
-  }
-  .note-cell:hover .note-tip {
-    display: block;
-  }
-  .note-tip {
-    display: none;
-    position: absolute;
-    left: 0; top: 100%;
-    z-index: 50;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    max-width: 360px;
-    min-width: 200px;
+    line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
-    font-size: 12px;
-    color: var(--text);
-    line-height: 1.6;
-    box-shadow: 0 8px 24px rgba(0,0,0,.4);
   }
+  .note-cell.expanded .note-text {
+    -webkit-line-clamp: unset;
+    display: block;
+  }
+  .note-toggle {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .note-toggle:hover { background: rgba(212,135,90,.1); }
 
   /* ── Empty State ── */
   .empty {
@@ -501,14 +499,13 @@ function render() {
     tbody.innerHTML = filtered.map(t => {
       const isOverdue = t.dueDate && t.status !== 'done' && new Date(t.dueDate) < new Date(new Date().toDateString());
       const dateStr = t.dueDate ? formatDate(t.dueDate) : '-';
-      const noteShort = t.note ? esc(t.note.length > 40 ? t.note.slice(0,40)+'...' : t.note) : '';
-      const noteFull = t.note ? esc(t.note) : '';
+      const noteHasLines = t.note && t.note.length > 50;
       return `<tr class="${t.status === 'done' ? 'completed' : ''}" data-id="${t.id}">
         <td><div class="task-check ${t.status === 'done' ? 'checked' : ''}" onclick="toggleDone('${t.id}')"></div></td>
         <td class="col-title" style="font-weight:500">${esc(t.title)}</td>
-        <td class="col-note note-cell">
-          <span class="note-text">${noteShort}</span>
-          ${noteFull ? `<div class="note-tip">${noteFull}</div>` : ''}
+        <td class="col-note note-cell" id="note-${t.id}">
+          ${t.note ? `<span class="note-text">${esc(t.note)}</span>` : ''}
+          ${noteHasLines ? `<button class="note-toggle" onclick="toggleNote('${t.id}')">展开 ▾</button>` : ''}
         </td>
         <td style="text-align:center"><span class="tag tag-cat">${esc(t.category || '其他')}</span></td>
         <td style="text-align:center"><span class="tag tag-${t.priority}">${pLabel[t.priority]}</span></td>
@@ -608,6 +605,14 @@ function cycleStatus(id) {
   const cycle = { pending: 'doing', doing: 'done', done: 'pending' };
   t.status = cycle[t.status];
   save(); render();
+}
+
+function toggleNote(id) {
+  const cell = document.getElementById('note-' + id);
+  if (!cell) return;
+  const btn = cell.querySelector('.note-toggle');
+  cell.classList.toggle('expanded');
+  btn.textContent = cell.classList.contains('expanded') ? '收起 ▴' : '展开 ▾';
 }
 
 function setFilter(type, value, btn) {
