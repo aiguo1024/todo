@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>待办事项跟踪表</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#e0e0e0;min-height:100vh;padding:20px}
+.container{max-width:800px;margin:0 auto}
+h1{text-align:center;font-size:1.5rem;margin-bottom:5px;color:#fff}
+.date{text-align:center;color:#888;font-size:.85rem;margin-bottom:20px}
+.stats{display:flex;justify-content:center;gap:10px;margin-bottom:20px}
+.stat-btn{padding:6px 16px;border-radius:20px;border:1px solid #333;background:transparent;color:#aaa;font-size:.8rem;cursor:pointer;transition:.2s}
+.stat-btn.active{background:#e94560;color:#fff;border-color:#e94560}
+.stat-btn:hover{border-color:#e94560;color:#e94560}
+.stat-btn.active:hover{color:#fff}
+.search-row{display:flex;gap:10px;margin-bottom:15px}
+.search-row input{flex:1;padding:8px 14px;border-radius:8px;border:1px solid #333;background:#16213e;color:#e0e0e0;font-size:.9rem;outline:none}
+.search-row input:focus{border-color:#e94560}
+.search-row input::placeholder{color:#555}
+.add-btn{padding:8px 18px;border-radius:8px;border:none;background:#e94560;color:#fff;font-size:.9rem;cursor:pointer;white-space:nowrap;font-weight:600;transition:.2s}
+.add-btn:hover{background:#c73650}
+.filters{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.filters select{padding:6px 10px;border-radius:6px;border:1px solid #333;background:#16213e;color:#aaa;font-size:.8rem;cursor:pointer;outline:none}
+.filters select:focus{border-color:#e94560}
+.task-list{display:flex;flex-direction:column;gap:10px}
+.task-card{background:#16213e;border:1px solid #2a2a4a;border-radius:10px;padding:14px 18px;transition:.2s}
+.task-card:hover{border-color:#e94560}
+.task-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.task-title{font-weight:600;font-size:1rem;color:#fff}
+.task-actions{display:flex;gap:6px}
+.task-actions button{width:28px;height:28px;border-radius:6px;border:1px solid #333;background:transparent;color:#aaa;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.task-actions button:hover{border-color:#e94560;color:#e94560}
+.task-actions button.del:hover{border-color:#ff6b6b;color:#ff6b6b}
+.task-note{color:#888;font-size:.8rem;margin-bottom:8px}
+.task-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tag{padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:500}
+.tag-cat{background:#0f3460;color:#4fc3f7}
+.tag-pri{background:#533483;color:#e040fb}
+.tag-pri.urgent{background:#b71c1c;color:#ffcdd2}
+.tag-status{background:#1b5e20;color:#a5d6a7}
+.tag-status.doing{background:#e65100;color:#ffe0b2}
+.tag-date{background:#263238;color:#90a4ae}
+.empty{text-align:center;color:#555;padding:40px;font-size:.9rem}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#16213e;border:1px solid #2a2a4a;border-radius:12px;padding:24px;width:90%;max-width:440px}
+.modal h2{font-size:1.1rem;margin-bottom:16px;color:#fff}
+.modal label{display:block;font-size:.8rem;color:#888;margin-bottom:4px;margin-top:10px}
+.modal input,.modal select,.modal textarea{width:100%;padding:8px 10px;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#e0e0e0;font-size:.85rem;outline:none}
+.modal textarea{resize:vertical;min-height:60px}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:#e94560}
+.modal-btns{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.modal-btns button{padding:8px 20px;border-radius:8px;border:none;font-size:.85rem;cursor:pointer;font-weight:500}
+.btn-cancel{background:#333;color:#aaa}
+.btn-save{background:#e94560;color:#fff}
+.btn-cancel:hover{background:#444}
+.btn-save:hover{background:#c73650}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>待办事项跟踪表</h1>
+<p class="date" id="todayDate"></p>
+<div class="stats">
+<button class="stat-btn active" data-filter="all">全部 <span id="countAll">0</span></button>
+<button class="stat-btn" data-filter="待办">待办 <span id="countTodo">0</span></button>
+<button class="stat-btn" data-filter="进行中">进行中 <span id="countDoing">0</span></button>
+<button class="stat-btn" data-filter="已完成">已完成 <span id="countDone">0</span></button>
+</div>
+<div class="search-row">
+<input type="text" id="searchInput" placeholder="搜索任务…">
+<button class="add-btn" id="addBtn">+ 新建任务</button>
+</div>
+<div class="filters">
+<select id="filterStatus"><option value="">状态</option><option>待办</option><option>进行中</option><option>已完成</option></select>
+<select id="filterPri"><option value="">优先级</option><option>紧急</option><option>高</option><option>中</option><option>低</option></select>
+<select id="filterCat"><option value="">分类</option><option>团队</option><option>工作</option><option>个人</option><option>学习</option></select>
+</div>
+<div class="task-list" id="taskList"></div>
+</div>
+
+<div class="modal-overlay" id="modal">
+<div class="modal">
+<h2 id="modalTitle">新建任务</h2>
+<input type="hidden" id="editId">
+<label>任务名称</label>
+<input type="text" id="fTitle" placeholder="输入任务名称">
+<label>备注</label>
+<textarea id="fNote" placeholder="添加备注…"></textarea>
+<label>分类</label>
+<select id="fCat"><option>团队</option><option>工作</option><option>个人</option><option>学习</option></select>
+<label>优先级</label>
+<select id="fPri"><option>紧急</option><option>高</option><option>中</option><option>低</option></select>
+<label>状态</label>
+<select id="fStatus"><option>待办</option><option selected>进行中</option><option>已完成</option></select>
+<label>截止日期</label>
+<input type="date" id="fDate">
+<div class="modal-btns">
+<button class="btn-cancel" id="cancelBtn">取消</button>
+<button class="btn-save" id="saveBtn">保存</button>
+</div>
+</div>
+</div>
+
+<script>
+const STORAGE_KEY='todo_tasks_v1';
+const DAYS=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+let tasks=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')||[{id:1,title:'团队招聘',note:'5月底前锁定以下岗位的候选人...',cat:'团队',pri:'紧急',status:'进行中',date:'2026-05-31'}];
+let currentFilter='all';
+
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(tasks))}
+
+function todayStr(){
+const d=new Date();
+const m=d.getMonth()+1,day=d.getDate(),y=d.getFullYear();
+return y+'年'+m+'月'+day+'日 '+DAYS[d.getDay()];
+}
+
+function render(){
+document.getElementById('todayDate').textContent=todayStr();
+const q=document.getElementById('searchInput').value.toLowerCase();
+const fs=document.getElementById('filterStatus').value;
+const fp=document.getElementById('filterPri').value;
+const fc=document.getElementById('filterCat').value;
+
+let filtered=tasks.filter(t=>{
+if(currentFilter!=='all'&&t.status!==currentFilter)return false;
+if(fs&&t.status!==fs)return false;
+if(fp&&t.pri!==fp)return false;
+if(fc&&t.cat!==fc)return false;
+if(q&&!t.title.toLowerCase().includes(q)&&!t.note.toLowerCase().includes(q))return false;
+return true;
+});
+
+document.getElementById('countAll').textContent=tasks.length;
+document.getElementById('countTodo').textContent=tasks.filter(t=>t.status==='待办').length;
+document.getElementById('countDoing').textContent=tasks.filter(t=>t.status==='进行中').length;
+document.getElementById('countDone').textContent=tasks.filter(t=>t.status==='已完成').length;
+
+const list=document.getElementById('taskList');
+if(!filtered.length){list.innerHTML='<div class="empty">暂无任务 ✨</div>';return}
+list.innerHTML=filtered.map(t=>{
+const priClass=t.pri==='紧急'?'urgent':'';
+const statusClass=t.status==='进行中'?'doing':'';
+return `<div class="task-card">
+<div class="task-top">
+<span class="task-title">${esc(t.title)}</span>
+<div class="task-actions">
+<button onclick="editTask(${t.id})" title="编辑">✏️</button>
+<button class="del" onclick="delTask(${t.id})" title="删除">🗑️</button>
+</div>
+</div>
+<div class="task-note">${esc(t.note)}</div>
+<div class="task-meta">
+<span class="tag tag-cat">${esc(t.cat)}</span>
+<span class="tag tag-pri ${priClass}">${esc(t.pri)}</span>
+<span class="tag tag-status ${statusClass}">${esc(t.status)}</span>
+<span class="tag tag-date">📅 ${esc(t.date)}</span>
+</div>
+</div>`;
+}).join('');
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function openModal(t){
+document.getElementById('modal').classList.add('show');
+if(t){
+document.getElementById('modalTitle').textContent='编辑任务';
+document.getElementById('editId').value=t.id;
+document.getElementById('fTitle').value=t.title;
+document.getElementById('fNote').value=t.note;
+document.getElementById('fCat').value=t.cat;
+document.getElementById('fPri').value=t.pri;
+document.getElementById('fStatus').value=t.status;
+document.getElementById('fDate').value=t.date;
+}else{
+document.getElementById('modalTitle').textContent='新建任务';
+document.getElementById('editId').value='';
+document.getElementById('fTitle').value='';
+document.getElementById('fNote').value='';
+document.getElementById('fCat').value='团队';
+document.getElementById('fPri').value='中';
+document.getElementById('fStatus').value='待办';
+document.getElementById('fDate').value='';
+}
+document.getElementById('fTitle').focus();
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+
+document.getElementById('addBtn').onclick=()=>openModal(null);
+document.getElementById('cancelBtn').onclick=closeModal;
+document.getElementById('modal').onclick=e=>{if(e.target===document.getElementById('modal'))closeModal()};
+
+document.getElementById('saveBtn').onclick=()=>{
+const title=document.getElementById('fTitle').value.trim();
+if(!title){document.getElementById('fTitle').focus();return}
+const editId=document.getElementById('editId').value;
+const obj={
+title,
+note:document.getElementById('fNote').value.trim(),
+cat:document.getElementById('fCat').value,
+pri:document.getElementById('fPri').value,
+status:document.getElementById('fStatus').value,
+date:document.getElementById('fDate').value
+};
+if(editId){
+const idx=tasks.findIndex(t=>t.id==editId);
+if(idx>=0)Object.assign(tasks[idx],obj);
+}else{
+obj.id=Date.now();
+tasks.unshift(obj);
+}
+save();render();closeModal();
+};
+
+window.editTask=id=>{const t=tasks.find(x=>x.id===id);if(t)openModal(t)};
+window.delTask=id=>{if(confirm('确定删除？')){tasks=tasks.filter(t=>t.id!==id);save();render()}};
+
+document.querySelectorAll('.stat-btn').forEach(btn=>{
+btn.onclick=()=>{
+document.querySelectorAll('.stat-btn').forEach(b=>b.classList.remove('active'));
+btn.classList.add('active');
+currentFilter=btn.dataset.filter;
+render();
+};
+});
+
+document.getElementById('searchInput').oninput=render;
+document.getElementById('filterStatus').onchange=render;
+document.getElementById('filterPri').onchange=render;
+document.getElementById('filterCat').onchange=render;
+
+render();
+</script>
+</body>
+</html>
