@@ -144,7 +144,7 @@
     letter-spacing: .3px;
     text-transform: uppercase;
   }
-  thead th:first-child { width: 44px; text-align: center; }
+
   thead th.col-title { width: 30%; }
   thead th.col-note { width: 28%; }
   thead th.col-category { width: 80px; text-align: center; }
@@ -172,18 +172,7 @@
   }
   tbody td:first-child { text-align: center; }
 
-  /* Checkbox */
-  .task-check {
-    width: 20px; height: 20px; border-radius: 50%;
-    border: 2px solid var(--border); cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-    transition: all .2s;
-  }
-  .task-check:hover { border-color: var(--green); }
-  .task-check.checked {
-    background: var(--green); border-color: var(--green);
-  }
-  .task-check.checked::after { content: "\2713"; color: #fff; font-size: 12px; font-weight: 700; }
+
 
   /* Tags */
   .tag {
@@ -350,7 +339,6 @@
     <table>
       <thead>
         <tr>
-          <th></th>
           <th class="col-title">任务</th>
           <th class="col-note">备注</th>
           <th class="col-category">分类</th>
@@ -501,7 +489,6 @@ function render() {
       const dateStr = t.dueDate ? formatDate(t.dueDate) : '-';
       const noteHasLines = t.note && t.note.length > 50;
       return `<tr class="${t.status === 'done' ? 'completed' : ''}" data-id="${t.id}">
-        <td><div class="task-check ${t.status === 'done' ? 'checked' : ''}" onclick="toggleDone('${t.id}')"></div></td>
         <td class="col-title" style="font-weight:500">${esc(t.title)}</td>
         <td class="col-note note-cell" id="note-${t.id}">
           ${t.note ? `<span class="note-text">${esc(t.note)}</span>` : ''}
@@ -592,12 +579,7 @@ function deleteTask(id) {
   save(); render();
 }
 
-function toggleDone(id) {
-  const t = tasks.find(x => x.id === id);
-  if (!t) return;
-  t.status = t.status === 'done' ? 'pending' : 'done';
-  save(); render();
-}
+
 
 function cycleStatus(id) {
   const t = tasks.find(x => x.id === id);
